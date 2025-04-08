@@ -38,6 +38,8 @@ En este último ejercicio se añadió un sistema de exploración urbana y gestor
 - Cada punto incluye información como latitud, longitud, categoría, nota y foto (opcional).
 - Categorías personalizables como favoritos, pendientes o recomendados.
 - Sistema preparado para búsquedas, filtros y asociación de imágenes a cada POI.
+  
+## Ejercicio 3:  Implementación de una Funcionalidades Adicional
 
 ### Generador de Rutas de Navegación:
 - Se integró un botón dentro del popup de cada POI que permite seleccionar a cuál se desea ir.
