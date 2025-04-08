@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Exploración Urbana</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Leaflet -->
+    <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script
+            src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Leaflet Routing Machine -->
+    <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <script
+            src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
+
+    <style>
+        html, body {
+          height: 100%;
+          margin: 0;
+        }
+
+        #map {
+          height: 100%;
+          width: 100%;
+        }
+
+        #barraProgreso {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          z-index: 1000;
+          background: white;
+          padding: 6px 10px;
+          border-radius: 10px;
+          font-family: sans-serif;
+          box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+<!-- Barra de progreso -->
+<div id="barraProgreso">
+    Zonas exploradas: <span id="contadorZonas">0</span> / <span id="totalZonas">2</span>
+</div>
+
+<div id="map"></div>
+
+<script>
+    let map = L.map('map').setView([0, 0], 2);
+    let marker;
+    let controlRuta;
+
+    // Ícono personalizado
+    const blueIcon = L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/4875/4875600.png',
+      iconSize: [40, 40],
+      iconAnchor: [20, 40],
+      popupAnchor: [0, -40]
+    });
+
+    // Zonas por descubrir
+    let zonas = [
+      { nombre: "Parque Central", centro: [19.4326, -99.1332], radio: 300, descubierta: false },
+      { nombre: "Museo Histórico", centro: [19.4350, -99.1400], radio: 300, descubierta: false }
+    ];
+
+    document.getElementById("totalZonas").textContent = zonas.length;
+
+    // Actualizar progreso
+    function actualizarProgreso() {
+      const descubiertas = zonas.filter(z => z.descubierta).length;
+      document.getElementById("contadorZonas").textContent = descubiertas;
+    }
+
+    // Verificar zonas desbloqueadas
+    function verificarZonas(lat, lon) {
+      zonas.forEach(zona => {
+        const distancia = map.distance([lat, lon], zona.centro);
+        if (!zona.descubierta && distancia < zona.radio) {
+          zona.descubierta = true;
+          alert("🎉 Has descubierto: " + zona.nombre);
+          actualizarProgreso();
+        }
+      });
+    }
+
+    // Sugerir ruta a próxima zona
+    function sugerirRuta(lat, lon) {
+      const noDescubiertas = zonas.filter(z => !z.descubierta);
+      if (noDescubiertas.length === 0) return;
+
+      const destino = noDescubiertas[0].centro;
+
+      if (controlRuta) map.removeControl(controlRuta);
+
+      controlRuta = L.Routing.control({
+        waypoints: [L.latLng(lat, lon), L.latLng(destino)],
+        createMarker: () => null,
+        show: false,
+        addWaypoints: false
+      }).addTo(map);
+    }
+
+    // Cargar POIs cercanos
+    function loadPOIs(lat, lon) {
+      const radius = 1000;
+      const query = `[out:json];
+        (
+          node["tourism"](around:${radius},${lat},${lon});
+          node["leisure"](around:${radius},${lat},${lon});
+          node["amenity"="restaurant"](around:${radius},${lat},${lon});
+        );
+        out;`;
+
+      fetch("https://overpass-api.de/api/interpreter", {
+        method: "POST",
+        body: query
+      })
+        .then(res => res.json())
+        .then(data => {
+          data.elements.forEach(el => {
+            if (el.lat && el.lon) {
+              L.marker([el.lat, el.lon])
+                .addTo(map)
+                .bindPopup(el.tags.name || "Punto de Interés");
+            }
+          });
+        });
+    }
+
+    // Función llamada desde Android para actualizar ubicación
+    function updateMap(lat, lon) {
+      map.setView([lat, lon], 17);
+
+      if (marker) {
+        marker.setLatLng([lat, lon]);
+      } else {
+        marker = L.marker([lat, lon], { icon: blueIcon }).addTo(map)
+          .bindPopup("📍 Estás aquí").openPopup();
+      }
+
+      verificarZonas(lat, lon);
+      actualizarProgreso();
+      sugerirRuta(lat, lon);
+      loadPOIs(lat, lon);
+    }
+
+    // Guardar POI con toque largo
+    map.on('contextmenu', function (e) {
+      const lat = e.latlng.lat;
+      const lon = e.latlng.lng;
+
+      if (window.AndroidInterface) {
+        window.AndroidInterface.savePOI(lat, lon);
+      }
+
+      L.marker([lat, lon])
+        .addTo(map)
+        .bindPopup("📍 Guardado")
+        .openPopup();
+    });
+
+    // Cargar mapa
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+</script>
+</body>
+</html>
