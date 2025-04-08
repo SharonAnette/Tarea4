@@ -38,3 +38,11 @@ En este último ejercicio se añadió un sistema de exploración urbana y gestor
 - Cada punto incluye información como latitud, longitud, categoría, nota y foto (opcional).
 - Categorías personalizables como favoritos, pendientes o recomendados.
 - Sistema preparado para búsquedas, filtros y asociación de imágenes a cada POI.
+
+### Generador de Rutas de Navegación:
+- Se integró un botón dentro del popup de cada POI que permite seleccionar a cuál se desea ir.
+- Al seleccionar un punto, se marca la ruta sugerida desde la ubicación actual del usuario utilizando Leaflet Routing Machine.
+- En la parte superior de la pantalla se muestra la estimación de tiempo y distancia de la ruta generada, brindando una experiencia similar a la navegación real.
+
+
+
